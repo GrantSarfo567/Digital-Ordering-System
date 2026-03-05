@@ -1,0 +1,38 @@
+# ---------------------
+# Python / FastAPI
+# ---------------------
+__pycache__/
+*.pyc
+.env
+venv/
+*.sqlite3
+*.log
+
+# ---------------------
+# Flutter / Dart
+# ---------------------
+build/
+.dart_tool/
+.packages
+.pub-cache/
+.idea/
+*.iml
+*.lock
+
+# ---------------------
+# React / Node.js
+# ---------------------
+node_modules/
+build/
+.env.local
+.env.development
+.env.production
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------------------
+# General / OS
+# ---------------------
+.DS_Store
+Thumbs.db
