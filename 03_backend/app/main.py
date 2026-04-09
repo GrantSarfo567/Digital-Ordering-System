@@ -13,4 +13,4 @@ app.include_router(restaurants.router, prefix="/restaurants", tags=["Restaurants
 
 @app.get("/")
 def root():
-    return {"message": "Our DigServeGh Food Ordering API is running"}
+    return {"message": "Our Digital Ordering System API is running"}
