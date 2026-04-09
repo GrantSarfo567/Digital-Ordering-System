@@ -5,7 +5,7 @@ def send_otp(phone: str):
     return response
 
 def verify_otp(phone: str, token: str):
-    response = supabase.auth.sign_in_with_otp({
+    response = supabase.auth.verify_otp({
         "phone": phone,
         "token": token,
         "type": "sms"
