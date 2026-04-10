@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from app.routers import auth, orders, menu, restaurants
 
 app = FastAPI(
-    title="Digital Ordering System API",
+    title="Digital Ordering System Backend",
     version="1.0.0"
 )
 

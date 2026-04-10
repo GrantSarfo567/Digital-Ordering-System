@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from app.services.auth_service import send_otp, verify_otp
+from app.middleware.auth import get_current_user
 
 router = APIRouter()
 
@@ -27,5 +28,22 @@ def verify_otp_route(body: OTPVerifyRequest):
             "message": "Verification successful",
             "session": response
         }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+
+class ProfileRequest(BaseModel):
+    name: str = None
+
+@router.post("/profile")
+def sync_profile(body: ProfileRequest, current_user=Depends(get_current_user)):
+    try:
+        from app.services.auth_service import get_or_create_user
+        user = get_or_create_user(
+            user_id=str(current_user.id),
+            phone=current_user.phone,
+            name=body.name
+        )
+        return {"message": "Profile synced", "user": user}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
