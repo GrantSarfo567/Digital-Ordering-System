@@ -2,12 +2,18 @@ from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
+from enum import Enum
+
+class MenuItemSize(str, Enum):
+    medium = "medium"
+    large = "large"
 
 class MenuItemCreate(BaseModel):
     name: str
     description: Optional[str] = None
     category: str
     price: float
+    size: Optional[MenuItemSize] = None
     image_url: Optional[str] = None
 
 class MenuItemResponse(BaseModel):
@@ -17,6 +23,7 @@ class MenuItemResponse(BaseModel):
     description: Optional[str] = None
     category: str
     price: float
+    size: Optional[str] = None
     image_url: Optional[str] = None
     is_available: bool
     created_at: datetime
