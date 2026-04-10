@@ -1,10 +1,20 @@
 from app.core.supabase import supabase
 
+def normalize_phone(phone: str) -> str:
+    phone = phone.strip()
+    if phone.startswith("+"):
+        phone = phone[1:]
+    if phone.startswith("0"):
+        phone = "233" + phone[1:]
+    return phone
+
 def send_otp(phone: str):
+    phone = normalize_phone(phone)
     response = supabase.auth.sign_in_with_otp({"phone": phone})
     return response
 
 def verify_otp(phone: str, token: str):
+    phone = normalize_phone(phone)
     response = supabase.auth.verify_otp({
         "phone": phone,
         "token": token,
