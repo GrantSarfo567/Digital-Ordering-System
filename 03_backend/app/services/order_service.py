@@ -173,7 +173,8 @@ def create_order(user_id: str, data: dict) -> dict:
         "p_delivery_lat": lat,
         "p_delivery_lng": lng,
         "p_delivery_location": data.get("delivery_location"),
-        "p_items": validated_items
+        "p_items": validated_items,
+        "p_payment_method": data["payment_method"],
     }).execute()
 
     if not rpc_response.data:
@@ -193,6 +194,7 @@ def create_order(user_id: str, data: dict) -> dict:
         "delivery_location": data.get("delivery_location"),
         "items": validated_items,
         "distance_km": round(distance, 2),
+        
     }
 
 

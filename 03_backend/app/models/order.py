@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
@@ -14,6 +14,13 @@ class OrderCreate(BaseModel):
     delivery_location: str
     delivery_lat: Optional[float] = None
     delivery_lng: Optional[float] = None
+    payment_method: Optional[str] = "momo"  # ✅ SAFE DEFAULT
+
+    @field_validator("payment_method")
+    def validate_payment_method(cls, v):
+        if v not in ["momo", "cash"]:
+            raise ValueError("payment_method must be 'momo' or 'cash'")
+        return v
 
 class OrderResponse(BaseModel):
     id: UUID
