@@ -188,7 +188,7 @@ def create_order(user_id: str, data: dict) -> dict:
         "restaurant_id": data["restaurant_id"],
         "total": grand_total,
         "delivery_fee": delivery_fee,
-        "status": "pending",
+        "status": "PENDING",
         "delivery_lat": lat,
         "delivery_lng": lng,
         "delivery_location": data.get("delivery_location"),

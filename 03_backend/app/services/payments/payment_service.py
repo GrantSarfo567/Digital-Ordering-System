@@ -1,29 +1,27 @@
 from app.core.supabase import supabase
-from app.services.payments.payment_dispatcher import route_payment
 from app.services.payments.payment_state import validate_payment_update, PaymentStatus
 from app.services.payments.payment_utils import (
     generate_idempotency_key,
     generate_external_reference,
     normalize_phone,
-    validate_amount
+    validate_amount,
+    detect_network
 )
 from app.services.payments.payment_models import Payment
-from app.services.payments.payment_utils import detect_network  # 🔥 ADD IMPORT
+from app.services.payments.providers.paystack import PaystackProvider
+
 import uuid
 
 
-# 🔥 FIX: make function async (needed for provider calls)
+# -------------------------
+# CREATE PAYMENT
+# -------------------------
 async def create_payment(order_id: str, user_id: str, phone: str):
-    """
-    ✅ FIXED:
-    - Removed amount from input (now fetched from order)
-    - Enforces order ownership
-    """
 
     phone = normalize_phone(phone)
 
     # -------------------------
-    # FETCH ORDER FROM DB
+    # FETCH ORDER
     # -------------------------
     order_response = (
         supabase.table("orders")
@@ -37,22 +35,20 @@ async def create_payment(order_id: str, user_id: str, phone: str):
         raise Exception("Order not found")
 
     order = order_response.data
-    payment_method = order.get("payment_method", "momo")
 
     # -------------------------
-    # VERIFY USER OWNS ORDER
+    # VERIFY OWNERSHIP
     # -------------------------
     if order["user_id"] != user_id:
-        raise Exception("Unauthorized: cannot pay for another user's order")
+        raise Exception("Unauthorized")
 
-    # -------------------------
-    # EXTRACT AMOUNT FROM ORDER
-    # -------------------------
     amount = float(order["total"])
     validate_amount(amount)
 
+    payment_method = order.get("payment_method", "momo")
+
     # -------------------------
-    # GENERATE IDS
+    # IDS
     # -------------------------
     idempotency_key = generate_idempotency_key(order_id)
     external_reference = generate_external_reference(order_id)
@@ -67,18 +63,16 @@ async def create_payment(order_id: str, user_id: str, phone: str):
         "amount": amount,
         "currency": "GHS",
         "phone": phone,
-        "network": network,  # 🔥 ADD THIS LINE
+        "network": network,
         "payment_status": PaymentStatus.PENDING.value,
         "idempotency_key": idempotency_key,
         "external_reference": external_reference,
         "payment_method": payment_method,
         "provider": "paystack"
-}
-
-
+    }
 
     # -------------------------
-    # INSERT WITH IDEMPOTENCY
+    # INSERT (IDEMPOTENT)
     # -------------------------
     try:
         insert_response = supabase.table("payments").insert(payment_record).execute()
@@ -91,7 +85,7 @@ async def create_payment(order_id: str, user_id: str, phone: str):
             .execute()
         )
 
-        if existing.data:
+        if existing and existing.data:
             return {
                 "payment_id": existing.data["id"],
                 "status": existing.data["payment_status"]
@@ -105,50 +99,39 @@ async def create_payment(order_id: str, user_id: str, phone: str):
     payment_data = insert_response.data[0]
     payment = Payment(**payment_data)
 
-    generated_email = f"user_{payment.user_id}@darks.app"  # 🔥 NEW
+    generated_email = f"user_{payment.user_id}@darks.app"
 
     # -------------------------
-    # HANDLE CASH ON DELIVERY
+    # CASH HANDLING
     # -------------------------
-    if payment_method == "cash":
+    if payment_method == "pay_on_delivery":
         supabase.table("payments").update({
-            "payment_status": "pending_cash"
+            "payment_status": PaymentStatus.PENDING_PAY_ON_DELIVERY.value
         }).eq("id", payment_id).execute()
 
         return {
             "payment_id": payment_id,
-            "status": "pending_cash"
+            "status": PaymentStatus.PENDING_PAY_ON_DELIVERY.value
         }
 
     # -------------------------
-    # ROUTE PAYMENT
+    # PAYSTACK INIT
     # -------------------------
+    provider = PaystackProvider()
+
     try:
-        # 🔥 FIX: route_payment should now RETURN provider (not execute)
-        provider = route_payment(payment)
-
-        # 🔥 FIX: actually call provider (MTN or Paystack)
         provider_response = await provider.initiate_payment(payment, email=generated_email)
-
     except Exception as e:
-        # 🔥 OPTIONAL FAILOVER: fallback to Paystack
-        from app.services.payments.providers.paystack import PaystackProvider
+        supabase.table("payments").update({
+            "payment_status": PaymentStatus.FAILED.value,
+            "failure_reason": str(e)
+        }).eq("id", payment_id).execute()
 
-        paystack_provider = PaystackProvider()
-
-        try:
-            provider_response = await paystack_provider.initiate_payment(payment, email=generated_email)
-        except Exception as fallback_error:
-            supabase.table("payments").update({
-                "payment_status": PaymentStatus.FAILED.value,
-                "failure_reason": str(fallback_error)
-            }).eq("id", payment_id).execute()
-
-            return {
-                "payment_id": payment_id,
-                "status": "failed",
-                "message": str(fallback_error)
-            }
+        return {
+            "payment_id": payment_id,
+            "status": "FAILED",
+            "message": str(e)
+        }
 
     # -------------------------
     # HANDLE FAILURE RESPONSE
@@ -161,54 +144,32 @@ async def create_payment(order_id: str, user_id: str, phone: str):
 
         return {
             "payment_id": payment_id,
-            "status": "failed",
+            "status": "FAILED",
             "message": provider_response.message if provider_response else "Unknown error"
         }
 
     # -------------------------
-    # TRANSITION → PROCESSING
+    # UPDATE → PROCESSING
     # -------------------------
-    try:
-        if validate_payment_update(
-            PaymentStatus.PENDING.value,
-            PaymentStatus.PROCESSING.value
-        ):
-            update_data = {
-                "payment_status": PaymentStatus.PROCESSING.value
-            }
+    update_data = {
+        "payment_status": PaymentStatus.PROCESSING.value
+    }
 
-            # 🔥 FIX: handle both MTN + Paystack reference
-            if hasattr(provider_response, "transaction_id") and provider_response.transaction_id:
-                update_data["transaction_id"] = provider_response.transaction_id
+    if provider_response.external_reference:
+        update_data["external_reference"] = provider_response.external_reference
 
-            if hasattr(provider_response, "external_reference") and provider_response.external_reference:
-                update_data["external_reference"] = provider_response.external_reference
+    supabase.table("payments").update(update_data).eq("id", payment_id).execute()
 
-            supabase.table("payments").update(update_data).eq("id", payment_id).execute()
-
-    except Exception as e:
-        supabase.table("payments").update({
-            "payment_status": PaymentStatus.FAILED.value,
-            "failure_reason": str(e)
-        }).eq("id", payment_id).execute()
-
-        return {
-            "payment_id": payment_id,
-            "status": "failed",
-            "message": str(e)
-        }
-
-    # -------------------------
-    # RESPONSE TO CLIENT
-    # -------------------------
     return {
         "payment_id": payment_id,
-        "status": "processing",
-        # 🔥 FIX: return Paystack checkout URL if available
+        "status": "PROCESSING",
         "checkout_url": getattr(provider_response, "checkout_url", None)
     }
 
 
+# -------------------------
+# GET PAYMENT
+# -------------------------
 def get_payment(payment_id: str):
     response = (
         supabase.table("payments")
@@ -224,13 +185,14 @@ def get_payment(payment_id: str):
     return response.data
 
 
+# -------------------------
+# UPDATE PAYMENT (WEBHOOK)
+# -------------------------
 async def update_payment_status(reference: str, status: str):
-    """
-    Called by webhook to update payment + order
-    """
 
-    # 1. Find payment by reference
-    payment = (
+    print("Looking for payment:", reference)
+
+    response = (
         supabase.table("payments")
         .select("*")
         .eq("external_reference", reference)
@@ -238,21 +200,39 @@ async def update_payment_status(reference: str, status: str):
         .execute()
     )
 
-    if not payment.data:
+    payment = response.data
+
+    if not payment:
         print("Payment not found:", reference)
         return
 
-    payment_data = payment.data
+    # Idempotency
+    if payment["payment_status"] == PaymentStatus.SUCCESSFUL.value:
+        print("Already processed")
+        return
 
-    # 2. Update payment
+    # Update payment
     supabase.table("payments").update({
         "payment_status": status
-    }).eq("id", payment_data["id"]).execute()
+    }).eq("id", payment["id"]).execute()
 
-    # 3. If successful → update order
-    if status == "successful":
+    print(f"Payment {reference} → {status}")
+
+    # -------------------------
+    # ORDER SYNC
+    # -------------------------
+    if status == PaymentStatus.SUCCESSFUL.value:
+
         supabase.table("orders").update({
-            "status": "paid"
-        }).eq("id", payment_data["order_id"]).execute()
+            "status": "PAID"
+        }).eq("id", payment["order_id"]).execute()
 
-    print(f"Payment {reference} updated → {status}")
+        print(f"Order {payment['order_id']} → PAID")
+
+    elif status == PaymentStatus.FAILED.value:
+
+        supabase.table("orders").update({
+            "status": "CANCELLED"
+        }).eq("id", payment["order_id"]).execute()
+
+        print(f"Order {payment['order_id']} → CANCELLED")

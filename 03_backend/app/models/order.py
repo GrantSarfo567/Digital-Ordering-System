@@ -18,8 +18,8 @@ class OrderCreate(BaseModel):
 
     @field_validator("payment_method")
     def validate_payment_method(cls, v):
-        if v not in ["momo", "cash"]:
-            raise ValueError("payment_method must be 'momo' or 'cash'")
+        if v not in ["momo", "pay on delivery"]:
+            raise ValueError("payment_method must be 'momo' or 'pay on delivery'")
         return v
 
 class OrderResponse(BaseModel):

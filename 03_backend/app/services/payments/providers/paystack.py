@@ -47,7 +47,7 @@ class PaystackProvider(PaymentProvider):
         if not data.get("status"):
             return ProviderResponse(
                 success=False,
-                status="failed",
+                status="FAILED",
                 message=data.get("message", "Paystack init failed"),
                 provider="paystack",
                 raw=data
@@ -56,7 +56,7 @@ class PaystackProvider(PaymentProvider):
         # ✅ SUCCESS
         return ProviderResponse(
             success=True,
-            status="processing",
+            status="PROCESSING",
             provider="paystack",
             external_reference=data["data"]["reference"],
             checkout_url=data["data"]["authorization_url"],
@@ -81,7 +81,7 @@ class PaystackProvider(PaymentProvider):
         if data["data"]["status"] == "success":
             return ProviderResponse(
                 success=True,
-                status="successful",
+                status="SUCCESSFUL",
                 provider="paystack",
                 external_reference=reference,
                 raw=data
@@ -89,7 +89,7 @@ class PaystackProvider(PaymentProvider):
 
         return ProviderResponse(
             success=False,
-            status="failed",
+            status="FAILED",
             provider="paystack",
             external_reference=reference,
             raw=data
@@ -119,7 +119,7 @@ class PaystackProvider(PaymentProvider):
 
             return ProviderResponse(
                 success=True,
-                status="successful",
+                status="SUCCESSFUL",
                 provider="paystack",
                 external_reference=data["reference"],
                 amount=data.get("amount", 0) / 100,
@@ -128,7 +128,7 @@ class PaystackProvider(PaymentProvider):
 
         return ProviderResponse(
             success=False,
-            status="failed",
+            status="FAILED",
             provider="paystack",
             raw=payload
         )

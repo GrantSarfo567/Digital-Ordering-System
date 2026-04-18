@@ -12,34 +12,41 @@ async def paystack_webhook(
 ):
     print("🔥 PAYSTACK WEBHOOK HIT")
 
-    # 🔥 Read raw body (needed for signature verification)
+    # -------------------------
+    # RAW BODY (for signature)
+    # -------------------------
     body = await request.body()
 
     provider = PaystackProvider()
 
-    # ❌ Missing signature
+    # -------------------------
+    # VALIDATE SIGNATURE
+    # -------------------------
     if not x_paystack_signature:
         print("❌ Missing signature header")
         raise HTTPException(status_code=400, detail="Missing signature")
 
-    # 🔐 VERIFY SIGNATURE
     is_valid = provider.verify_webhook(body, x_paystack_signature)
     print("🔐 Signature valid:", is_valid)
 
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+    # -------------------------
+    # PARSE PAYLOAD
+    # -------------------------
     payload = await request.json()
 
     print("📦 PAYLOAD:", payload)
     print("📌 EVENT:", payload.get("event"))
 
-    # 🔥 PARSE EVENT
     response = provider.parse_webhook(payload)
 
     print("🧠 PARSED RESPONSE:", response)
 
-    # ❌ Ignore irrelevant events
+    # -------------------------
+    # IGNORE IRRELEVANT EVENTS
+    # -------------------------
     if not response.success:
         print("⚠️ Ignored event")
         return {"status": "ignored"}
@@ -48,12 +55,19 @@ async def paystack_webhook(
         print("❌ Missing reference in webhook")
         return {"status": "error", "message": "Missing reference"}
 
-    # 🔥 UPDATE PAYMENT + ORDER
+    # -------------------------
+    # 🔥 CRITICAL FIX (NORMALIZE STATUS)
+    # -------------------------
+    status = response.status.upper()
+
+    # -------------------------
+    # UPDATE PAYMENT + ORDER
+    # -------------------------
     await update_payment_status(
         reference=response.external_reference,
-        status=response.status
+        status=status
     )
 
-    print(f"✅ Payment updated → {response.external_reference} = {response.status}")
+    print(f"✅ Payment updated → {response.external_reference} = {status}")
 
     return {"status": "ok"}
