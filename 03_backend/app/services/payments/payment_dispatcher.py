@@ -1,14 +1,23 @@
 from app.services.payments.providers.mtn import MTNProvider
-#from app.services.payments.providers.telecel import TelecelProvider
-#from app.services.payments.providers.airteltigo import AirtelTigoProvider
+from app.services.payments.providers.paystack import PaystackProvider
+# from app.services.payments.providers.telecel import TelecelProvider
+# from app.services.payments.providers.airteltigo import AirtelTigoProvider
 
 
 def route_payment(payment):
     """
-    Routes payment to correct provider
+    🔥 UPDATED:
+    - Returns provider (does NOT execute)
+    - Supports multi-provider routing
     """
 
-    # 🔥 For now: default to MTN
-    provider = MTNProvider()
+    # 🔥 MTN stays direct
+    if getattr(payment, "network", None) == "MTN":
+        return MTNProvider()
 
-    return provider.request_payment(payment)
+    # 🔥 Paystack handles AirtelTigo + Telecel
+    if getattr(payment, "network", None) in ["AIRTELTIGO", "TELECEL"]:
+        return PaystackProvider()
+
+    # 🔥 Fallback (VERY IMPORTANT)
+    return PaystackProvider()

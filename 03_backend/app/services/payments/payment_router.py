@@ -12,7 +12,7 @@ class CreatePaymentRequest(BaseModel):
 
 
 @router.post("/")
-def create_payment_endpoint(
+async def create_payment_endpoint(
     request: CreatePaymentRequest,
     user=Depends(get_current_user)
 ):
@@ -22,7 +22,7 @@ def create_payment_endpoint(
     - No user_id from client
     """
 
-    result = create_payment(
+    result = await create_payment(
         order_id=request.order_id,
         user_id=user.id,   # ✅ THIS IS CORRECT FOR YOUR AUTH
         phone=request.phone
@@ -36,7 +36,7 @@ def create_payment_endpoint(
 
 
 @router.get("/{payment_id}")
-def get_payment_status(
+async def get_payment_status(
     payment_id: str,
     user=Depends(get_current_user)
 ):

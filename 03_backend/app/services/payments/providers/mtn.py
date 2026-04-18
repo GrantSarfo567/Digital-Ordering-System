@@ -47,7 +47,7 @@ class MTNProvider:
     # INITIATE PAYMENT
     # =====================================================
 
-    def request_payment(self, payment: Payment) -> ProviderResponse:
+    def request_payment(self, payment: Payment, email: str) -> ProviderResponse:
         token = self._get_token()
 
         reference_id = str(uuid.uuid4())

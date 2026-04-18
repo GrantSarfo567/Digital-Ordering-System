@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from datetime import datetime
 
 
@@ -15,6 +15,8 @@ class Payment:
     amount: float
     currency: str
     payment_status: str
+    network: Optional[str] = None
+      # 🔥 ADD THIS FIELD
 
     # Optional / dynamic fields
     provider: Optional[str] = None
@@ -48,11 +50,14 @@ class CreatePaymentInput:
 @dataclass
 class ProviderResponse:
     success: bool
+    status: str
+    provider: str              # 🔥 ADD THIS
     message: Optional[str] = None
-    transaction_id: Optional[str] = None
     external_reference: Optional[str] = None
-    status: Optional[str] = None
-
+    transaction_id: Optional[str] = None
+    checkout_url: Optional[str] = None
+    amount: Optional[float] = None
+    raw: Optional[Any] = None
 
 # =====================================================
 # WEBHOOK EVENT MODEL (NORMALIZED)
