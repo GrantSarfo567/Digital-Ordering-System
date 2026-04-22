@@ -48,15 +48,15 @@ async def paystack_webhook(
     # IGNORE IRRELEVANT EVENTS
     # -------------------------
     if not response.success:
-        print("⚠️ Ignored event")
+        print("Ignored event")
         return {"status": "ignored"}
 
     if not response.external_reference:
-        print("❌ Missing reference in webhook")
+        print("Missing reference in webhook")
         return {"status": "error", "message": "Missing reference"}
 
     # -------------------------
-    # 🔥 CRITICAL FIX (NORMALIZE STATUS)
+    # CRITICAL FIX (NORMALIZE STATUS)
     # -------------------------
     status = response.status.upper()
 

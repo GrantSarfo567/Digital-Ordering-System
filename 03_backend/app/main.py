@@ -26,4 +26,4 @@ app.include_router(webhooks_router, tags=["Webhooks"])
 
 @app.get("/")
 def root():
-    return {"message": "Our Digital Ordering System backend is up and running"}
+    return {"message": "Darks Technologies Digital Ordering System backend is up and running"}

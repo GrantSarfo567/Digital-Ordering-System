@@ -45,16 +45,35 @@ async def create_payment(order_id: str, user_id: str, phone: str):
     amount = float(order["total"])
     validate_amount(amount)
 
-    payment_method = order.get("payment_method", "momo")
+    # -------------------------
+    # 🔥 FIX: NORMALIZE PAYMENT METHOD
+    # -------------------------
+    payment_method = (order.get("payment_method") or "").strip().lower()
+
+    if payment_method in ["pay on delivery", "pay_on_delivery", "cod"]:
+        payment_method = "pay_on_delivery"
+    elif payment_method in ["momo", "paystack"]:
+        payment_method = "paystack"
+    else:
+        raise Exception(f"Unsupported payment method: {payment_method}")
 
     # -------------------------
     # IDS
     # -------------------------
     idempotency_key = generate_idempotency_key(order_id)
-    external_reference = generate_external_reference(order_id)
     payment_id = str(uuid.uuid4())
 
     network = detect_network(phone)
+
+    # -------------------------
+    # INITIAL VALUES
+    # -------------------------
+    external_reference = None
+    provider_name = None
+
+    if payment_method == "paystack":
+        external_reference = generate_external_reference(order_id)
+        provider_name = "paystack"
 
     payment_record = {
         "id": payment_id,
@@ -68,7 +87,7 @@ async def create_payment(order_id: str, user_id: str, phone: str):
         "idempotency_key": idempotency_key,
         "external_reference": external_reference,
         "payment_method": payment_method,
-        "provider": "paystack"
+        "provider": provider_name
     }
 
     # -------------------------
@@ -102,7 +121,7 @@ async def create_payment(order_id: str, user_id: str, phone: str):
     generated_email = f"user_{payment.user_id}@darks.app"
 
     # -------------------------
-    # CASH HANDLING
+    # CASH HANDLING (COD)
     # -------------------------
     if payment_method == "pay_on_delivery":
         supabase.table("payments").update({
@@ -203,7 +222,21 @@ async def update_payment_status(reference: str, status: str):
     payment = response.data
 
     if not payment:
-        print("Payment not found:", reference)
+        print("⚠️ Payment not found:", reference)
+        return
+
+    # Ensure it's a Paystack payment
+    if payment.get("provider") != "paystack":
+        print("⚠️ Not a Paystack payment → ignoring")
+        return
+
+    status = status.upper()
+
+    if status not in [
+        PaymentStatus.SUCCESSFUL.value,
+        PaymentStatus.FAILED.value
+    ]:
+        print("⚠️ Invalid status → ignoring")
         return
 
     # Idempotency
@@ -211,12 +244,15 @@ async def update_payment_status(reference: str, status: str):
         print("Already processed")
         return
 
+    # Validate transition
+    validate_payment_update(payment["payment_status"], status)
+
     # Update payment
     supabase.table("payments").update({
         "payment_status": status
     }).eq("id", payment["id"]).execute()
 
-    print(f"Payment {reference} → {status}")
+    print(f"✅ Payment {reference} → {status}")
 
     # -------------------------
     # ORDER SYNC
