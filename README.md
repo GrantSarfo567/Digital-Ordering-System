@@ -1,8 +1,8 @@
-# Restaurant Ordering App - Project Plan
+# Digital Ordering System - Project Plan
 
 ## Project Title
 
-Restaurant Mobile Ordering System
+Restaurant Mobile Ordering App
 
 ## Objective
 
@@ -20,6 +20,6 @@ A mobile ordering system that allows users to browse the restaurant menu and pla
 | Stakeholder | Role |
 | --- | --- |
 | Restaurant owner | Business owner |
-| Developers (Darks & Qwodjo) | System builders |
+| Developer (Darks) | Systems Engineer |
 | Customers | End users |
-| Delivery riders | Logistics(Later) |
+| Delivery riders | Logistics |
