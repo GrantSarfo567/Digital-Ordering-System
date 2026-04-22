@@ -6,6 +6,8 @@ These describe what the **end-user of the mobile app** can do.
 
 | ID | Requirement |
 | --- | --- |
+| FR0 | The application must become accessible precisely at 10:30 AM. Prior to this time, a countdown timer indicating the remaining time in the format (hh:mm:ss) shall be displayed to the user upon opening the application. |
+| FR2b.-la | The system should automatically detect the user’s location immediately after login. |
 | FR1 | Users must be able to register an account |
 | FR2 | Users must be able to log in and log out |
 | FR3 | Users must be able to browse the restaurant menu |
@@ -13,8 +15,10 @@ These describe what the **end-user of the mobile app** can do.
 | FR5 | Users must be able to add items to cart |
 | FR6 | Users must be able to remove items from cart |
 | FR7 | Users must be able to modify item quantity |
+| FR7b.-la | users must be able to view ETA before an order is placed |
 | FR8 | Users must be able to place an order |
 | FR9 | Users must be able to choose payment method |
+| FR9b.-la | Users must be able to pay via pay on delivery be it cash or momo |
 | FR10 | Users must be able to pay via Mobile Money |
 | FR11 | Users must receive confirmation when order is placed |
 | FR12 | Users must be able to view order status |
@@ -22,6 +26,8 @@ These describe what the **end-user of the mobile app** can do.
 | FR14 | Users must be able to cancel an order before preparation |
 | FR15 | Users must be able to save delivery location |
 | fR16 | Users must be able to get a refund when orders are insufficient |
+| FR17 | A display timer should be shown in the app when nearing closing time 9:00pm |
+| FR18 | The app must be non-accessible when students go on vacation. A display message showing something like, we’ll resume very soon | 
 
 # Restaurant Admin Functional Requirements (Operational Only)
 
