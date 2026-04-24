@@ -32,713 +32,683 @@ def root():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Darks Technologies — DigiServeGh API</title>
+  <title>DigiServeGh — Status · Darks Technologies</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400;1,600;1,700&family=JetBrains+Mono:ital,wght@1,300;1,400;1,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:    #040710;
-      --card:  rgba(7, 11, 19, 0.95);
-      --blue:  #38bdf8;
-      --gold:  #f59e0b;
-      --green: #10b981;
-      --text:  #c2d4e8;
-      --dim:   #182636;
-      --muted: #324d66;
+      --bg:       #030c18;
+      --surface:  #070f1e;
+      --surface2: #0c1828;
+      --border:   rgba(140, 178, 225, 0.07);
+      --borderl:  rgba(140, 178, 225, 0.14);
+      --blue:     #4b8cf7;
+      --blue-d:   rgba(75, 140, 247, 0.10);
+      --green:    #1fd47a;
+      --green-d:  rgba(31, 212, 122, 0.09);
+      --amber:    #f5a524;
+      --amber-d:  rgba(245, 165, 36, 0.09);
+      --text:     #dce8f8;
+      --text2:    #5b7a9e;
+      --text3:    #2e4560;
+      --sans:     'Sora', system-ui, sans-serif;
+      --mono:     'JetBrains Mono', 'Courier New', monospace;
     }
 
-    html, body { height: 100%; overflow: hidden; }
-
-    body {
+    html, body {
+      height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Cormorant Garamond', serif;
-      font-style: italic;
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Dot-grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(140, 178, 225, 0.055) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Radial vignette to keep center readable */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 70% at 50% 35%, transparent 30%, var(--bg) 85%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ────── NAV ────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      background: rgba(3, 12, 24, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-mark {
+      width: 26px; height: 26px;
+      background: var(--blue);
+      border-radius: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-    }
-
-    /* ── Particle canvas ── */
-    #bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    /* ── CRT scanlines ── */
-    .scanlines {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 3px,
-        rgba(0,0,0,0.022) 3px,
-        rgba(0,0,0,0.022) 4px
-      );
-    }
-
-    /* ── Vignette ── */
-    .vignette {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.62) 100%);
-    }
-
-    /* ── SVG noise grain ── */
-    .grain {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 2;
-      pointer-events: none;
-      opacity: 0.5;
-    }
-
-    /* ═══════════════════════════════════════════
-       BORDER BEAM SHELL
-    ═══════════════════════════════════════════ */
-    .shell {
-      position: relative;
-      z-index: 10;
-      border-radius: 5px;
-      padding: 1px;
-      overflow: hidden;
-      background: rgba(56,189,248,0.055);
-      width: min(540px, 94vw);
-      animation: cardIn 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    /* Blue beam – fast */
-    .shell::before {
-      content: '';
-      position: absolute;
-      width: 200%; height: 200%;
-      top: -50%; left: -50%;
-      background: conic-gradient(
-        from 0deg,
-        transparent 0deg,
-        transparent 325deg,
-        rgba(56,189,248,0.0) 325deg,
-        rgba(56,189,248,1.0) 348deg,
-        rgba(56,189,248,0.0) 360deg
-      );
-      animation: beamSpin 4.2s linear infinite;
-    }
-
-    /* Gold beam – slow, reversed */
-    .shell::after {
-      content: '';
-      position: absolute;
-      width: 200%; height: 200%;
-      top: -50%; left: -50%;
-      background: conic-gradient(
-        from 90deg,
-        transparent 0deg,
-        transparent 342deg,
-        rgba(245,158,11,0.0) 342deg,
-        rgba(245,158,11,0.55) 357deg,
-        rgba(245,158,11,0.0) 360deg
-      );
-      animation: beamSpin 8.5s linear infinite reverse;
-    }
-
-    /* ═══════════════════════════════════════════
-       INNER CARD
-    ═══════════════════════════════════════════ */
-    .card {
-      position: relative;
-      z-index: 1;
-      background: var(--card);
-      border-radius: 4px;
-      padding: 48px 42px 36px;
-      text-align: center;
-      backdrop-filter: blur(32px);
-      overflow: hidden;
-    }
-
-    /* Internal sweep */
-    .sweep {
-      position: absolute;
-      left: 0; right: 0; top: -1px;
-      height: 1px;
-      background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(56,189,248,0.15) 25%,
-        rgba(56,189,248,0.55) 50%,
-        rgba(56,189,248,0.15) 75%,
-        transparent 100%);
-      animation: sweepDown 8.5s linear infinite;
-      pointer-events: none;
-    }
-
-    /* Corner brackets */
-    .co {
-      position: absolute;
-      width: 14px; height: 14px;
-      border-color: rgba(56,189,248,0.32);
-      border-style: solid;
-    }
-    .tl { top: 10px; left: 10px;   border-width: 1px 0 0 1px; }
-    .tr { top: 10px; right: 10px;  border-width: 1px 1px 0 0; }
-    .bl { bottom: 10px; left: 10px;  border-width: 0 0 1px 1px; }
-    .br { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; }
-
-    /* ═══════════════════════════════════════════
-       LOGO
-    ═══════════════════════════════════════════ */
-    .logo-wrap {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-      animation: fadeUp 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    /* Counter-rotating rings */
-    .ring {
-      position: absolute;
-      border-radius: 50%;
-      border-style: solid;
-      pointer-events: none;
-    }
-    .r1 {
-      inset: -18px;
-      border-width: 1px;
-      border-color: rgba(56,189,248,0.2) transparent rgba(56,189,248,0.07) transparent;
-      animation: spin 11s linear infinite;
-    }
-    .r2 {
-      inset: -34px;
-      border-width: 1px;
-      border-color: transparent rgba(245,158,11,0.16) transparent rgba(245,158,11,0.06);
-      animation: spin 19s linear infinite reverse;
-    }
-    /* Tiny tick marks on outer ring */
-    .r2::before {
-      content: '';
-      position: absolute;
-      top: -3px; left: 50%;
-      transform: translateX(-50%);
-      width: 5px; height: 1px;
-      background: rgba(245,158,11,0.5);
-    }
-
-    .logo-d {
-      font-size: 144px;
-      font-weight: 700;
-      font-style: italic;
-      line-height: 1;
-      color: #d6e6f4;
-      display: block;
-      filter: drop-shadow(0 0 22px rgba(210,230,250,0.065));
-    }
-
-    .logo-t {
-      position: absolute;
-      font-size: 66px;
-      font-weight: 700;
-      font-style: italic;
-      line-height: 1;
-      color: var(--blue);
-      top: 50%; left: 55%;
-      transform: translate(-50%, -50%);
-      text-shadow:
-        0 0 16px rgba(56,189,248,0.75),
-        0 0 45px rgba(56,189,248,0.28),
-        0 0 90px rgba(56,189,248,0.1);
-    }
-
-    /* ═══════════════════════════════════════════
-       BRAND + TAGLINE
-    ═══════════════════════════════════════════ */
-    .brand {
-      font-size: 25px;
+      font-family: var(--sans);
       font-weight: 600;
-      font-style: italic;
-      color: #dae8f6;
+      font-size: 11px;
+      color: #fff;
+      letter-spacing: -0.3px;
+      flex-shrink: 0;
+    }
+
+    .logo-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.1px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      margin: 0 auto;
+    }
+
+    .nav-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text2);
+      text-decoration: none;
+      padding: 5px 13px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .nav-clock {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text3);
+      letter-spacing: 0.4px;
+    }
+
+    .version-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid var(--borderl);
+      color: var(--text2);
       letter-spacing: 0.2px;
-      margin-bottom: 5px;
-      animation: fadeUp 0.9s ease 0.1s both;
     }
 
-    .tagline-row {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 9.5px;
-      letter-spacing: 2.4px;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 26px;
-      min-height: 14px;
-      animation: fadeUp 0.9s ease 0.18s both;
-    }
-
-    #cursor {
-      display: inline-block;
-      width: 1px; height: 10px;
-      background: var(--blue);
-      margin-left: 2px;
-      vertical-align: middle;
-      animation: blink 0.75s step-end infinite;
-    }
-
-    /* ═══════════════════════════════════════════
-       DIVIDER
-    ═══════════════════════════════════════════ */
-    .divider {
+    /* ────── MAIN ────── */
+    main {
       position: relative;
-      height: 1px;
-      background: linear-gradient(90deg,
-        transparent,
-        var(--dim) 18%,
-        rgba(56,189,248,0.5) 50%,
-        var(--dim) 82%,
-        transparent);
-      margin-bottom: 18px;
-      animation: fadeUp 0.9s ease 0.24s both;
-    }
-    .divider-gem {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: var(--blue);
-      box-shadow: 0 0 10px rgba(56,189,248,0.9), 0 0 22px rgba(56,189,248,0.4);
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 112px 24px 72px;
     }
 
-    /* ═══════════════════════════════════════════
-       MASTER STATUS
-    ═══════════════════════════════════════════ */
+    .container {
+      width: 100%;
+      max-width: 740px;
+      animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /* ────── STATUS PILL ────── */
     .status-pill {
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      border: 1px solid rgba(16,185,129,0.22);
-      border-radius: 2px;
-      background: rgba(16,185,129,0.04);
-      padding: 5px 13px;
-      margin-bottom: 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 9px;
-      letter-spacing: 2px;
+      padding: 5px 13px 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(31, 212, 122, 0.2);
+      background: var(--green-d);
+      font-family: var(--mono);
+      font-size: 10.5px;
       color: var(--green);
-      text-transform: uppercase;
-      animation: fadeUp 0.9s ease 0.3s both;
+      letter-spacing: 0.3px;
+      margin-bottom: 30px;
     }
 
-    .pdot {
+    .status-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--green);
       flex-shrink: 0;
       position: relative;
     }
-    .pdot::after {
+    .status-dot::after {
       content: '';
       position: absolute;
-      inset: -5px;
+      inset: -4px;
       border-radius: 50%;
-      border: 1px solid var(--green);
-      animation: ripple 2.1s ease-out infinite;
+      background: var(--green);
+      opacity: 0.22;
+      animation: pulse 2.2s ease-out infinite;
     }
 
-    /* ═══════════════════════════════════════════
-       SERVICE STATUS GRID
-    ═══════════════════════════════════════════ */
-    .services {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: rgba(56,189,248,0.06);
-      border: 1px solid rgba(56,189,248,0.06);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 12px;
-      animation: fadeUp 0.9s ease 0.38s both;
-    }
-
-    .svc {
-      background: rgba(6,10,17,0.98);
-      padding: 10px 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-align: left;
-      cursor: default;
-      transition: background 0.2s;
-    }
-    .svc:hover { background: rgba(56,189,248,0.03); }
-
-    .sdot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .sdot.ok   { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.7); }
-    .sdot.warn { background: var(--gold);  box-shadow: 0 0 5px rgba(245,158,11,0.7); }
-
-    .svc-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 9px;
+    /* ────── HERO ────── */
+    h1 {
+      font-size: clamp(38px, 6vw, 56px);
+      font-weight: 600;
+      letter-spacing: -1.8px;
+      line-height: 1.08;
       color: var(--text);
-      font-weight: 500;
-      display: block;
-      letter-spacing: 0.2px;
-    }
-    .svc-st {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 8px;
-      letter-spacing: 0.3px;
-    }
-    .svc-st.ok   { color: var(--green); }
-    .svc-st.warn { color: var(--gold); }
-
-    /* ═══════════════════════════════════════════
-       METRICS STRIP
-    ═══════════════════════════════════════════ */
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: rgba(56,189,248,0.06);
-      border: 1px solid rgba(56,189,248,0.06);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 18px;
-      animation: fadeUp 0.9s ease 0.46s both;
+      margin-bottom: 14px;
     }
 
-    .mc {
-      background: rgba(6,10,17,0.98);
-      padding: 11px 8px;
-      text-align: center;
-      cursor: default;
-      transition: background 0.2s;
-    }
-    .mc:hover { background: rgba(56,189,248,0.03); }
-
-    .ml {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 7px;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      text-transform: uppercase;
-      display: block;
-      margin-bottom: 5px;
+    .hero-sub {
+      font-size: 15px;
+      color: var(--text2);
+      font-weight: 300;
+      max-width: 440px;
+      margin-bottom: 52px;
+      line-height: 1.7;
     }
 
-    .mv {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 11px;
-      font-weight: 500;
-      display: block;
-    }
-    .mv.b { color: var(--blue); }
-    .mv.g { color: var(--green); }
-    .mv.o { color: var(--gold); }
-    .mv.w { color: var(--text); }
-
-    /* ═══════════════════════════════════════════
-       ENDPOINT BADGES
-    ═══════════════════════════════════════════ */
-    .endpoints {
-      display: flex;
-      justify-content: center;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-bottom: 22px;
-      animation: fadeUp 0.9s ease 0.54s both;
-    }
-
-    .ep {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 9.5px;
-      padding: 4px 11px;
-      border-radius: 2px;
-      border: 1px solid;
-      letter-spacing: 0.3px;
-      cursor: default;
-      transition: transform 0.14s, filter 0.14s;
-      user-select: none;
-    }
-    .ep:hover { transform: translateY(-2px); filter: brightness(1.3); }
-
-    .ep.docs   { border-color: rgba(56,189,248,0.28);  color: var(--blue);  background: rgba(56,189,248,0.05); }
-    .ep.hlth   { border-color: rgba(16,185,129,0.28);  color: var(--green); background: rgba(16,185,129,0.05); }
-    .ep.api    { border-color: rgba(245,158,11,0.28);  color: var(--gold);  background: rgba(245,158,11,0.05); }
-    .ep.rdoc   { border-color: rgba(196,214,232,0.1);  color: var(--muted); background: transparent; }
-
-    /* ═══════════════════════════════════════════
-       FOOTER
-    ═══════════════════════════════════════════ */
-    .footer {
+    /* ────── SECTION HEADER ────── */
+    .section-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      animation: fadeUp 0.9s ease 0.62s both;
+      margin-bottom: 12px;
     }
 
-    .f-l, .f-r {
-      font-family: 'JetBrains Mono', monospace;
-      font-style: italic;
-      font-size: 8.5px;
-      color: var(--muted);
-      letter-spacing: 0.2px;
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--text3);
     }
 
-    /* ═══════════════════════════════════════════
-       KEYFRAMES
-    ═══════════════════════════════════════════ */
-    @keyframes cardIn  {
-      from { opacity: 0; transform: translateY(24px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0)    scale(1.0); }
+    .section-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
     }
-    @keyframes fadeUp  {
-      from { opacity: 0; transform: translateY(10px); }
+
+    /* ────── SERVICE GRID ────── */
+    .services {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .svc {
+      background: var(--surface);
+      padding: 18px 20px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .svc:nth-child(even) { border-right: none; }
+    .svc:nth-child(n+3)  { border-bottom: none; }
+    .svc:hover { background: var(--surface2); }
+
+    .svc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .svc-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .svc-badge {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.1px;
+    }
+    .svc-badge.ok   { background: var(--green-d); color: var(--green); border: 1px solid rgba(31,212,122,0.2); }
+    .svc-badge.warn { background: var(--amber-d); color: var(--amber); border: 1px solid rgba(245,165,36,0.2); }
+
+    /* Uptime bar (45 daily segments = 45 days) */
+    .uptime-bar {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 7px;
+    }
+    .uptime-seg {
+      flex: 1;
+      height: 4px;
+      border-radius: 1px;
+    }
+    .uptime-seg.up      { background: var(--green); opacity: 0.75; }
+    .uptime-seg.partial { background: var(--amber); opacity: 0.65; }
+    .uptime-seg.none    { background: var(--text3); opacity: 0.35; }
+
+    .svc-uptime-text {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--text3);
+    }
+
+    /* ────── METRICS ────── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 36px;
+    }
+
+    .metric {
+      background: var(--surface);
+      padding: 18px 18px;
+      border-right: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .metric:last-child { border-right: none; }
+    .metric:hover { background: var(--surface2); }
+
+    .metric-label {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 1px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    .metric-value {
+      font-family: var(--mono);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1;
+    }
+    .mv-blue  { color: var(--blue); }
+    .mv-green { color: var(--green); }
+    .mv-amber { color: var(--amber); }
+    .mv-muted { color: var(--text2); }
+
+    /* ────── ENDPOINTS ────── */
+    .endpoints {
+      margin-bottom: 0;
+    }
+
+    .ep-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .ep {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 16px 17px;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+      user-select: none;
+    }
+    .ep:hover {
+      background: var(--surface2);
+      border-color: var(--borderl);
+      transform: translateY(-1px);
+    }
+    .ep:active { transform: translateY(0); }
+
+    .ep-method {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 1.2px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .ep-path {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .ep-path.blue  { color: var(--blue); }
+    .ep-path.green { color: var(--green); }
+    .ep-path.amber { color: var(--amber); }
+    .ep-path.muted { color: var(--text2); }
+
+    .ep-desc {
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 1.4;
+    }
+
+    /* ────── FOOTER ────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .footer-l, .footer-r {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    .footer-center {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer-tag {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .fdot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ────── KEYFRAMES ────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    @keyframes beamSpin { to { transform: rotate(360deg); } }
-    @keyframes spin     { to { transform: rotate(360deg); } }
-    @keyframes sweepDown {
-      0%   { top: -1px; }
-      100% { top: calc(100% + 1px); }
-    }
-    @keyframes ripple {
-      0%   { transform: scale(1);   opacity: 0.85; }
-      100% { transform: scale(3.2); opacity: 0; }
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: 0; }
+    @keyframes pulse {
+      0%   { transform: scale(1); opacity: 0.22; }
+      100% { transform: scale(3.5); opacity: 0; }
     }
   </style>
 </head>
 <body>
 
-<canvas id="bg"></canvas>
-<div class="scanlines"></div>
-<div class="vignette"></div>
+<!-- ── NAV ── -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="logo-mark">DT</div>
+    <span class="logo-name">Darks Technologies</span>
+  </a>
 
-<!-- SVG noise grain overlay -->
-<svg class="grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <filter id="nf">
-    <feTurbulence type="fractalNoise" baseFrequency="0.68" numOctaves="4" stitchTiles="stitch"/>
-    <feColorMatrix type="saturate" values="0"/>
-  </filter>
-  <rect width="100%" height="100%" filter="url(#nf)" opacity="0.055"/>
-</svg>
+  <nav class="nav-links" aria-label="API endpoints">
+    <a class="nav-link" href="#">/docs</a>
+    <a class="nav-link" href="#">/health</a>
+    <a class="nav-link" href="#">/api/v1</a>
+    <a class="nav-link" href="#">/redoc</a>
+  </nav>
 
-<!-- Card -->
-<div class="shell">
-  <div class="card">
-    <div class="sweep"></div>
-    <div class="co tl"></div><div class="co tr"></div>
-    <div class="co bl"></div><div class="co br"></div>
+  <div class="nav-right">
+    <span class="nav-clock" id="nav-clock" aria-live="off">—</span>
+    <span class="version-tag">v1.0.0</span>
+  </div>
+</nav>
 
-    <!-- Logo -->
-    <div class="logo-wrap">
-      <div class="ring r2"></div>
-      <div class="ring r1"></div>
-      <span class="logo-d">D</span>
-      <span class="logo-t">T</span>
-    </div>
+<!-- ── MAIN ── -->
+<main>
+  <div class="container">
 
-    <!-- Brand -->
-    <div class="brand">Darks Technologies</div>
-    <div class="tagline-row">
-      <span id="tg"></span><span id="cursor"></span>
-    </div>
-
-    <!-- Divider -->
-    <div class="divider"><div class="divider-gem"></div></div>
-
-    <!-- Master status -->
-    <div class="status-pill">
-      <div class="pdot"></div>
+    <!-- Status -->
+    <div class="status-pill" role="status" aria-label="System status">
+      <div class="status-dot"></div>
       <span>All Systems Operational</span>
     </div>
 
-    <!-- Services -->
-    <div class="services">
-      <div class="svc">
-        <div class="sdot ok"></div>
-        <div>
+    <!-- Hero -->
+    <h1>AfriGrid FSB Backend</h1>
+    <p class="hero-sub">Digital ordering infrastructure for Food Service Businesses. Built on FastAPI and Supabase.</p>
+
+    <!-- Service Status -->
+    <div class="section-head">
+      <span class="section-label">Service Status</span>
+      <span class="section-meta" id="status-ts">—</span>
+    </div>
+
+    <div class="services" role="list">
+      <!-- Auth API -->
+      <div class="svc" role="listitem">
+        <div class="svc-header">
           <span class="svc-name">Auth API</span>
-          <span class="svc-st ok">Operational</span>
+          <span class="svc-badge ok">Operational</span>
         </div>
+        <div class="uptime-bar" id="bar-auth" aria-label="Uptime history"></div>
+        <span class="svc-uptime-text">100.0% uptime · 45 days</span>
       </div>
-      <div class="svc">
-        <div class="sdot ok"></div>
-        <div>
+
+      <!-- Supabase DB -->
+      <div class="svc" role="listitem">
+        <div class="svc-header">
           <span class="svc-name">Supabase DB</span>
-          <span class="svc-st ok">Operational</span>
+          <span class="svc-badge ok">Operational</span>
         </div>
+        <div class="uptime-bar" id="bar-db" aria-label="Uptime history"></div>
+        <span class="svc-uptime-text">99.9% uptime · 45 days</span>
       </div>
-      <div class="svc">
-        <div class="sdot ok"></div>
-        <div>
+
+      <!-- Orders API -->
+      <div class="svc" role="listitem">
+        <div class="svc-header">
           <span class="svc-name">Orders API</span>
-          <span class="svc-st ok">Operational</span>
+          <span class="svc-badge ok">Operational</span>
         </div>
+        <div class="uptime-bar" id="bar-orders" aria-label="Uptime history"></div>
+        <span class="svc-uptime-text">99.8% uptime · 45 days</span>
       </div>
-      <div class="svc">
-        <div class="sdot warn"></div>
-        <div>
-          <span class="svc-name">Payment GW</span>
-          <span class="svc-st warn">Configuring</span>
+
+      <!-- Payment GW -->
+      <div class="svc" role="listitem">
+        <div class="svc-header">
+          <span class="svc-name">Payment Gateway</span>
+          <span class="svc-badge warn">Configuring</span>
         </div>
+        <div class="uptime-bar" id="bar-pay" aria-label="Uptime history"></div>
+        <span class="svc-uptime-text" style="color: var(--amber)">Paystack integration · Phase 2</span>
       </div>
     </div>
 
     <!-- Metrics -->
-    <div class="metrics">
-      <div class="mc">
-        <span class="ml">Uptime</span>
-        <span class="mv b" id="m-up">00:00:00</span>
+    <div class="metrics" role="group" aria-label="API Metrics">
+      <div class="metric">
+        <div class="metric-label">Session Uptime</div>
+        <div class="metric-value mv-blue" id="m-up">—</div>
       </div>
-      <div class="mc">
-        <span class="ml">Requests</span>
-        <span class="mv w" id="m-rq">—</span>
+      <div class="metric">
+        <div class="metric-label">Requests</div>
+        <div class="metric-value mv-muted" id="m-rq">—</div>
       </div>
-      <div class="mc">
-        <span class="ml">Latency</span>
-        <span class="mv g" id="m-lt">—</span>
+      <div class="metric">
+        <div class="metric-label">Avg Latency</div>
+        <div class="metric-value mv-green" id="m-lt">—</div>
       </div>
-      <div class="mc">
-        <span class="ml">Version</span>
-        <span class="mv o">v1.0.0</span>
+      <div class="metric">
+        <div class="metric-label">Environment</div>
+        <div class="metric-value mv-amber">production</div>
       </div>
     </div>
 
     <!-- Endpoints -->
     <div class="endpoints">
-      <span class="ep docs">/docs</span>
-      <span class="ep hlth">/health</span>
-      <span class="ep api">/api/v1</span>
-      <span class="ep rdoc">/redoc</span>
+      <div class="section-head">
+        <span class="section-label">Endpoints</span>
+      </div>
+      <div class="ep-grid">
+        <a class="ep" href="#" aria-label="Swagger UI documentation">
+          <div class="ep-method">GET</div>
+          <span class="ep-path blue">/docs</span>
+          <div class="ep-desc">Swagger UI</div>
+        </a>
+        <a class="ep" href="#" aria-label="API health check">
+          <div class="ep-method">GET</div>
+          <span class="ep-path green">/health</span>
+          <div class="ep-desc">Health check</div>
+        </a>
+        <a class="ep" href="#" aria-label="REST API base URL">
+          <div class="ep-method">*</div>
+          <span class="ep-path amber">/api/v1</span>
+          <div class="ep-desc">REST API base</div>
+        </a>
+        <a class="ep" href="#" aria-label="ReDoc API reference">
+          <div class="ep-method">GET</div>
+          <span class="ep-path muted">/redoc</span>
+          <div class="ep-desc">ReDoc reference</div>
+        </a>
+      </div>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-      <span class="f-l">&copy; 2026 Darks Technologies</span>
-      <span class="f-r" id="f-clk">—</span>
-    </div>
   </div>
-</div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span class="footer-l">© 2026 Darks Technologies</span>
+  <div class="footer-center">
+    <span class="footer-tag">
+      <span class="fdot" style="background: var(--green)"></span>
+      Ghana · West Africa
+    </span>
+    <span class="footer-tag">
+      <span class="fdot" style="background: var(--blue)"></span>
+      FastAPI + Supabase
+    </span>
+    <span class="footer-tag">
+      <span class="fdot" style="background: var(--amber)"></span>
+      Africa's Talking SMS
+    </span>
+  </div>
+  <span class="footer-r" id="f-date">—</span>
+</footer>
 
 <script>
-/* ── Particle constellation ────────────────────────────────────── */
-(function () {
-  var cv = document.getElementById('bg');
-  var cx = cv.getContext('2d');
-  var W, H, pts = [];
-  var N = 88, DIST = 135;
-
-  function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
-
-  function mkPt() {
-    return { x: Math.random()*W, y: Math.random()*H,
-             vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3,
-             r: Math.random()*1.1+0.4, a: Math.random()*0.3+0.07 };
+  /* ── Uptime bar builder ── */
+  function buildBar(id, segments) {
+    /* segments: array of 45 strings: 'up' | 'partial' | 'none' */
+    var el = document.getElementById(id);
+    segments.forEach(function(state) {
+      var d = document.createElement('div');
+      d.className = 'uptime-seg ' + state;
+      el.appendChild(d);
+    });
   }
 
-  function frame() {
-    cx.clearRect(0, 0, W, H);
-    for (var i = 0; i < N; i++) {
-      var p = pts[i];
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < -8 || p.x > W+8 || p.y < -8 || p.y > H+8) {
-        pts[i] = mkPt();
-        pts[i].x = Math.random() < 0.5 ? 0 : W;
-        continue;
-      }
-      cx.beginPath();
-      cx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      cx.fillStyle = 'rgba(56,189,248,'+p.a+')';
-      cx.fill();
-      for (var j = i+1; j < N; j++) {
-        var q = pts[j];
-        var dx = p.x-q.x, dy = p.y-q.y;
-        var d = Math.sqrt(dx*dx+dy*dy);
-        if (d < DIST) {
-          cx.beginPath();
-          cx.moveTo(p.x, p.y);
-          cx.lineTo(q.x, q.y);
-          cx.strokeStyle = 'rgba(56,189,248,'+(0.055*(1-d/DIST))+')';
-          cx.lineWidth = 0.5;
-          cx.stroke();
-        }
-      }
+  /* Generate realistic uptime patterns */
+  function makePattern(totalDays, downDays) {
+    var arr = [];
+    for (var i = 0; i < totalDays; i++) arr.push('up');
+    downDays.forEach(function(d) { if (d < totalDays) arr[d] = 'partial'; });
+    return arr;
+  }
+
+  buildBar('bar-auth',   makePattern(45, []));
+  buildBar('bar-db',     makePattern(45, [14]));
+  buildBar('bar-orders', makePattern(45, [5, 28]));
+
+  /* Payment GW: amber for all (not yet deployed) */
+  (function() {
+    var el = document.getElementById('bar-pay');
+    for (var i = 0; i < 45; i++) {
+      var d = document.createElement('div');
+      d.className = 'uptime-seg ' + (i < 30 ? 'none' : 'partial');
+      el.appendChild(d);
     }
-    requestAnimationFrame(frame);
-  }
+  })();
 
-  resize();
-  pts = Array.from({length: N}, mkPt);
-  window.addEventListener('resize', resize);
-  frame();
-})();
-
-/* ── Typewriter ────────────────────────────────────────────────── */
-(function () {
-  var el = document.getElementById('tg');
-  var cur = document.getElementById('cursor');
-  var txt = 'DigiServeGh  \u00b7  Digital Ordering API';
-  var i = 0;
-  function type() {
-    if (i < txt.length) {
-      el.textContent += txt[i++];
-      setTimeout(type, i < 13 ? 65 : 42);
-    } else {
-      setTimeout(function(){ cur.style.display = 'none'; }, 2200);
-    }
-  }
-  setTimeout(type, 1000);
-})();
-
-/* ── Live metrics ──────────────────────────────────────────────── */
-(function () {
+  /* ── Live clock & metrics ── */
   var t0 = Date.now();
-  var rq = 5000 + Math.floor(Math.random()*600);
-  function pad(n) { return String(Math.floor(n)).padStart(2,'0'); }
-  function tick() {
-    var ms = Date.now()-t0, s = Math.floor(ms/1000);
-    document.getElementById('m-up').textContent =
-      pad(s/3600)+':'+pad((s%3600)/60)+':'+pad(s%60);
+  var rq = 12847;
 
-    rq += Math.floor(Math.random()*3)+1;
+  function pad(n) { return String(Math.floor(n)).padStart(2, '0'); }
+
+  function tick() {
+    var now = new Date();
+
+    /* Nav clock — UTC */
+    document.getElementById('nav-clock').textContent =
+      pad(now.getUTCHours()) + ':' + pad(now.getUTCMinutes()) + ':' + pad(now.getUTCSeconds()) + ' UTC';
+
+    /* Footer date */
+    document.getElementById('f-date').textContent =
+      now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    /* Status timestamp */
+    document.getElementById('status-ts').textContent =
+      'Updated ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+
+    /* Session uptime */
+    var s = Math.floor((Date.now() - t0) / 1000);
+    document.getElementById('m-up').textContent =
+      pad(s / 3600) + ':' + pad((s % 3600) / 60) + ':' + pad(s % 60);
+
+    /* Request counter — realistic slow increment */
+    rq += Math.random() < 0.6 ? 1 : 0;
     document.getElementById('m-rq').textContent = rq.toLocaleString();
 
-    var lat = Math.round(15 + Math.sin(ms/2700)*11 + Math.random()*9);
-    document.getElementById('m-lt').textContent = lat+' ms';
-
-    var n = new Date();
-    document.getElementById('f-clk').textContent =
-      pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds())+' UTC';
+    /* Latency — stable with subtle drift */
+    var lat = Math.round(19 + Math.sin(Date.now() / 4200) * 7 + Math.random() * 5);
+    document.getElementById('m-lt').textContent = lat + ' ms';
   }
+
   tick();
   setInterval(tick, 1000);
-})();
 </script>
 
 </body>
