@@ -5,7 +5,7 @@ from app.services.payments.payment_service import update_payment_status
 router = APIRouter()
 
 
-@router.post("/paystack")
+@router.post("/")
 async def paystack_webhook(
     request: Request,
     x_paystack_signature: str = Header(None)

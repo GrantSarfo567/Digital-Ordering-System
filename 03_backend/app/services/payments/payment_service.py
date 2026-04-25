@@ -9,6 +9,8 @@ from app.services.payments.payment_utils import (
 )
 from app.services.payments.payment_models import Payment
 from app.services.payments.providers.paystack import PaystackProvider
+from fastapi import HTTPException
+from datetime import datetime, timezone
 
 import uuid
 
@@ -255,20 +257,139 @@ async def update_payment_status(reference: str, status: str):
     print(f"✅ Payment {reference} → {status}")
 
     # -------------------------
-    # ORDER SYNC
+    # ORDER SYNC(FIXED)
     # -------------------------
-    if status == PaymentStatus.SUCCESSFUL.value:
+
+    if status in ["SUCCESS", "SUCCESSFUL", PaymentStatus.SUCCESSFUL.value]:
+
+        now = datetime.now(timezone.utc).isoformat()
 
         supabase.table("orders").update({
-            "status": "PAID"
+            "status": "PAID",
+            "paid_at": now
         }).eq("id", payment["order_id"]).execute()
 
-        print(f"Order {payment['order_id']} → PAID")
+        print(f"Order {payment['order_id']} → PAID (paid_at set)")
 
-    elif status == PaymentStatus.FAILED.value:
+
+    elif status in ["FAILED", "FAILURE", PaymentStatus.FAILED.value]:
 
         supabase.table("orders").update({
             "status": "CANCELLED"
         }).eq("id", payment["order_id"]).execute()
 
         print(f"Order {payment['order_id']} → CANCELLED")
+
+
+# -------------------------
+# CONFIRM DELIVERY (RIDER)
+# -------------------------
+async def confirm_delivery(payment_id: str, user_id: str):
+
+    # -------------------------
+    # GET USER ROLE
+    # -------------------------
+    user_response = (
+        supabase.table("users")
+        .select("role")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+
+    if not user_response.data:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    role = user_response.data.get("role")
+
+    # 🔒 Only rider (and developer for testing) should do this
+    if role not in ["rider", "developer"]:
+        raise HTTPException(status_code=403, detail="Only rider can confirm delivery payment")
+
+    # -------------------------
+    # GET PAYMENT
+    # -------------------------
+    payment_response = (
+        supabase.table("payments")
+        .select("*")
+        .eq("id", payment_id)
+        .execute()
+    )
+
+    if not payment_response.data:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    payment = payment_response.data[0]
+
+    # -------------------------
+    # GET ORDER
+    # -------------------------
+    order_response = (
+        supabase.table("orders")
+        .select("*")
+        .eq("id", payment["order_id"])
+        .execute()
+    )
+
+    if not order_response.data:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = order_response.data[0]
+
+    # -------------------------
+    # PREVENT DOUBLE DELIVERY
+    # -------------------------
+    if order["status"] == "DELIVERED":
+        raise HTTPException(status_code=400, detail="Order already delivered")
+
+    # -------------------------
+    # TIME
+    # -------------------------
+    now = datetime.now(timezone.utc).isoformat()
+
+    # -------------------------
+    # HANDLE PAY ON DELIVERY
+    # -------------------------
+    if payment["payment_method"] == "pay_on_delivery":
+
+        if payment["payment_status"] not in [
+            PaymentStatus.PENDING_PAY_ON_DELIVERY.value,
+            PaymentStatus.PENDING.value
+        ]:
+            raise HTTPException(status_code=400, detail="Invalid payment state")
+
+        # ✅ Update payment
+        supabase.table("payments").update({
+            "payment_status": PaymentStatus.SUCCESSFUL.value
+        }).eq("id", payment_id).execute()
+
+        # 🔥 FIX: Update order paid_at
+        supabase.table("orders").update({
+            "paid_at": now
+        }).eq("id", order["id"]).execute()
+
+    # -------------------------
+    # MOMO / PAYSTACK
+    # -------------------------
+    else:
+        if payment["payment_status"] != PaymentStatus.SUCCESSFUL.value:
+            raise HTTPException(status_code=400, detail="Payment not completed")
+
+        # 🔥 Ensure paid_at exists (fallback safety)
+        if not order.get("paid_at"):
+            supabase.table("orders").update({
+                "paid_at": now
+            }).eq("id", order["id"]).execute()
+
+    # -------------------------
+    # FINAL STEP → DELIVERED
+    # -------------------------
+    supabase.table("orders").update({
+        "status": "DELIVERED",
+        "delivered_at": now
+    }).eq("id", order["id"]).execute()
+
+    return {
+        "message": "Delivery confirmed successfully",
+        "order_id": order["id"]
+    }

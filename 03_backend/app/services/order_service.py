@@ -1,6 +1,9 @@
 from app.core.supabase import supabase
 import math
 from collections import defaultdict
+from datetime import datetime, timezone
+from fastapi import HTTPException
+from app.core.supabase import supabase
 
 
 # -----------------------------
@@ -237,37 +240,118 @@ def get_order_history(user_id: str) -> list:
 # Update order status
 # -----------------------------
 
-def update_order_status(order_id: str, new_status: str) -> dict:
-    valid_transitions = {
-        "pending": ["confirmed", "cancelled"],
-        "confirmed": ["preparing", "cancelled"],
-        "preparing": ["out_for_delivery"],
-        "out_for_delivery": ["delivered"],
-        "delivered": [],
-        "cancelled": [],
-    }
+def update_order_status(order_id: str, new_status: str, user_id: str) -> dict:
+    # Normalize
+    new_status = new_status.upper()
 
-    current = (
+    # -------------------------
+    # GET ORDER
+    # -------------------------
+    order_response = (
         supabase.table("orders")
-        .select("status")
+        .select("*")
         .eq("id", order_id)
         .single()
         .execute()
     )
 
-    if not current.data:
-        raise Exception("Order not found")
+    if not order_response.data:
+        raise HTTPException(status_code=404, detail="Order not found")
 
-    current_status = current.data["status"]
+    order = order_response.data
+    current_status = order["status"].upper()
+
+    # -------------------------
+    # GET USER ROLE
+    # -------------------------
+    user_response = (
+        supabase.table("users")
+        .select("role")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+
+    if not user_response.data:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    role = user_response.data["role"]
+
+    # -------------------------
+    # VALID TRANSITIONS
+    # -------------------------
+    valid_transitions = {
+        "PENDING": ["PAID", "CONFIRMED", "CANCELLED"],
+        "PAID": ["CONFIRMED"],
+        "CONFIRMED": ["PREPARING", "CANCELLED"],
+        "PREPARING": ["OUT_FOR_DELIVERY"],
+        "OUT_FOR_DELIVERY": ["DELIVERED"],
+        "DELIVERED": [],
+        "CANCELLED": [],
+    }
 
     if new_status not in valid_transitions.get(current_status, []):
-        raise Exception(f"Invalid status transition from {current_status} to {new_status}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid transition from {current_status} to {new_status}"
+        )
 
+    # -------------------------
+    # ROLE RULES
+    # -------------------------
+    if new_status in ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY"]:
+        if role not in ["admin", "developer"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only admin can perform this action"
+            )
+
+    if new_status == "DELIVERED":
+        if role not in ["rider", "developer"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only rider can mark as delivered"
+            )
+
+    # -------------------------
+    # TIMESTAMP HANDLING
+    # -------------------------
+    now = datetime.now(timezone.utc).isoformat()
+
+    update_data = {
+        "status": new_status,
+        "updated_at": now
+    }
+
+    if new_status == "PAID" and not order.get("paid_at"):
+        update_data["paid_at"] = now
+
+    elif new_status == "CONFIRMED" and not order.get("confirmed_at"):
+        update_data["confirmed_at"] = now
+
+    elif new_status == "PREPARING" and not order.get("preparing_at"):
+        update_data["preparing_at"] = now
+
+    elif new_status == "OUT_FOR_DELIVERY" and not order.get("out_for_delivery_at"):
+        update_data["out_for_delivery_at"] = now
+
+    elif new_status == "DELIVERED" and not order.get("delivered_at"):
+        update_data["delivered_at"] = now
+
+    elif new_status == "CANCELLED" and not order.get("cancelled_at"):
+        update_data["cancelled_at"] = now
+
+    # -------------------------
+    # UPDATE ORDER
+    # -------------------------
     updated = (
         supabase.table("orders")
-        .update({"status": new_status})
+        .update(update_data)
         .eq("id", order_id)
         .execute()
     )
+
+    if not updated.data:
+        raise HTTPException(status_code=500, detail="Failed to update order")
 
     return updated.data[0]

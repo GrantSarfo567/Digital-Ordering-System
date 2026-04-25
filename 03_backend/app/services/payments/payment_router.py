@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from app.services.payments.payment_service import create_payment, get_payment
-from app.middleware.auth import get_current_user   # ✅ correct import
+from app.middleware.auth import get_current_user
+from app.services.payments.payment_service import confirm_delivery   # ✅ correct import
 
-router = APIRouter(prefix="/payments", tags=["Payments"])
+router = APIRouter()
 
 
 class CreatePaymentRequest(BaseModel):
@@ -47,3 +48,7 @@ async def get_payment_status(
         raise Exception("Unauthorized")
 
     return payment
+
+@router.patch("/{payment_id}/confirm-delivery-payment")
+async def confirm(payment_id: str, user=Depends(get_current_user)):
+    return await confirm_delivery(payment_id, user.id)

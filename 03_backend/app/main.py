@@ -15,15 +15,12 @@ app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(menu.router, prefix="/menu", tags=["Menu"])
 app.include_router(restaurants.router, prefix="/restaurants", tags=["Restaurants"])
 
-# MTN webhook (prefixed here)
-app.include_router(mtn_webhook_router, prefix="/webhooks", tags=["Webhooks"])
-
 # Payments
 app.include_router(payment_router, prefix="/payments", tags=["Payments"])
 
-# 🔥 FIX: DO NOT add prefix here (it’s already inside webhook_router)
-app.include_router(webhooks_router, tags=["Webhooks"])
-
+# ALL webhooks grouped under /webhooks
+#app.include_router(mtn_webhook_router, prefix="/webhooks", tags=["Webhooks"])
+app.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
 
 @app.get("/", response_class=HTMLResponse)
 def root():
@@ -515,7 +512,7 @@ def root():
     </div>
 
     <!-- Hero -->
-    <h1>AfriGrid FSB Backend</h1>
+    <h1>AfriGrid FSB Backend v1.0.0.</h1>
     <p class="hero-sub">Digital ordering infrastructure for Food Service Businesses. Built on FastAPI and Supabase.</p>
 
     <!-- Service Status -->
